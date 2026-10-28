@@ -20,6 +20,7 @@ import net.minecraft.sounds.SoundSource;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class Raffle {
@@ -40,6 +41,8 @@ public class Raffle {
     private int lastShown = -1;
     private boolean revealed = false;
 
+
+
     public Raffle(MinecraftServer server, List<RaffleEntry> entries, String starter) {
         if (entries.isEmpty()) {
             throw new IllegalArgumentException("Lista losowania jest pusta!");
@@ -47,6 +50,8 @@ public class Raffle {
         this.server = server;
         this.entries = List.copyOf(entries);
         this.starter = starter;
+        // ... reszta konstruktora bez zmian
+
         // wynik jest ustalony od razu - uczciwie i niezależnie od animacji
         this.resultIndex = ThreadLocalRandom.current().nextInt(this.entries.size());
 
@@ -143,11 +148,17 @@ public class Raffle {
         send(new ClientboundSetTitlesAnimationPacket(0, 70, 20));
         send(new ClientboundSetTitleTextPacket(
                 Component.literal(result.name()).withStyle(result.color(), ChatFormatting.BOLD)));
-        send(new ClientboundSetSubtitleTextPacket(
-                Component.literal("★ ").withStyle(ChatFormatting.YELLOW)
-                        .append(Component.literal("Wylosowano!").withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD))
-                        .append(Component.literal(" ★").withStyle(ChatFormatting.YELLOW))));
 
+// subtitle z wpisu; gdy pusty - domyślne "Wylosowano!"
+        Component subtitle;
+        if (result.subtitle() == null || result.subtitle().isBlank()) {
+            subtitle = Component.literal("★ ").withStyle(ChatFormatting.YELLOW)
+                    .append(Component.literal("Wylosowano!").withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD))
+                    .append(Component.literal(" ★").withStyle(ChatFormatting.YELLOW));
+        } else {
+            subtitle = Component.literal(result.subtitle()).withStyle(ChatFormatting.YELLOW);
+        }
+        send(new ClientboundSetSubtitleTextPacket(subtitle));
         playAll(SoundEvents.PLAYER_LEVELUP, 1.0f, 1.0f);
         playAll(SoundEvents.TOTEM_USE, 0.6f, 1.2f);
 
@@ -168,7 +179,11 @@ public class Raffle {
         celebrate();
 
         // uruchomienie metody przypisanej do wylosowanego wpisu
-        result.action().accept(server);
+        // uruchomienie metody przypisanej do wylosowanego wpisu
+        List<ServerPlayer> players = List.copyOf(server.getPlayerList().getPlayers());
+        if (!players.isEmpty()) {
+            result.action().run(server, players);
+        }
     }
 
     private void celebrate() {
