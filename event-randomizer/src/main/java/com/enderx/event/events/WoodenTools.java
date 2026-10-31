@@ -12,7 +12,7 @@ import net.minecraft.world.item.Items;
 import java.util.List;
 
 public class WoodenTools {
-    public  static  void  replaceWoddenTools (MinecraftServer server, List<ServerPlayer> players) {
+    public  static  void  replaceWoodenTools (MinecraftServer server, List<ServerPlayer> players) {
         for (ServerPlayer player :players) {
             Inventory inventory = player.getInventory();
             int replaced = 0;
@@ -48,6 +48,7 @@ public class WoodenTools {
         if (stack.is(ItemTags.AXES))     return Items.WOODEN_AXE;
         if (stack.is(ItemTags.SHOVELS))  return Items.WOODEN_SHOVEL;
         if (stack.is(ItemTags.HOES))     return Items.WOODEN_HOE;
+        if (stack.is(ItemTags.SPEARS))   return Items.WOODEN_SPEAR;
         return null;
     }
 }

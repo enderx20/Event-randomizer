@@ -45,17 +45,16 @@ public class Raffle {
 
     public Raffle(MinecraftServer server, List<RaffleEntry> entries, String starter) {
         if (entries.isEmpty()) {
-            throw new IllegalArgumentException("Lista losowania jest pusta!");
+            throw new IllegalArgumentException("List is empty");
         }
         this.server = server;
         this.entries = List.copyOf(entries);
         this.starter = starter;
-        // ... reszta konstruktora bez zmian
 
-        // wynik jest ustalony od razu - uczciwie i niezależnie od animacji
+
         this.resultIndex = ThreadLocalRandom.current().nextInt(this.entries.size());
 
-        // płynne hamowanie: opóźnienie rośnie z sześcianem postępu (1 -> MAX_DELAY ticków)
+
         int t = 0;
         for (int i = 0; i < FRAMES; i++) {
             frameTicks[i] = t;
@@ -65,15 +64,9 @@ public class Raffle {
         this.revealAt = t;
 
         send(new ClientboundSetTitlesAnimationPacket(0, 20, 0));
-        server.getPlayerList().broadcastSystemMessage(
-                Component.literal("» ").withStyle(ChatFormatting.DARK_GRAY)
-                        .append(Component.literal(starter).withStyle(ChatFormatting.YELLOW))
-                        .append(Component.literal(" rozpoczyna losowanie...")
-                                .withStyle(ChatFormatting.GRAY)),
-                false);
+
     }
 
-    /** @return true gdy losowanie zakończone */
     public boolean tick() {
         if (nextFrame < FRAMES && age >= frameTicks[nextFrame]) {
             showFrame(nextFrame);
@@ -100,9 +93,9 @@ public class Raffle {
         if (entries.size() == 1) {
             idx = 0;
         } else if (last) {
-            idx = resultIndex;                                  // zatrzymanie dokładnie na wyniku
+            idx = resultIndex;
         } else if (i == FRAMES - 2) {
-            idx = randomIndexExcluding(lastShown, resultIndex); // przedostatnia nie może być wynikiem
+            idx = randomIndexExcluding(lastShown, resultIndex);
         } else {
             idx = randomIndexExcluding(lastShown, -1);
         }
@@ -117,19 +110,17 @@ public class Raffle {
         send(new ClientboundSetTitleTextPacket(title));
         send(new ClientboundSetSubtitleTextPacket(subtitle));
 
-        // note block pling z rosnącym pitchem przez całe losowanie
         float progress = (float) i / (FRAMES - 1);
-        float pitch = 0.5f + 1.5f * progress;             // od 0.5 do 2.0 (maksimum w Minecraftcie)
+        float pitch = 0.5f + 1.5f * progress;
         playAll(SoundEvents.NOTE_BLOCK_PLING.value(), 1.0f, pitch);
     }
 
-    /** Losuje indeks różny od dwóch podanych; gdy lista jest za krótka, wyklucza mniej. */
     private int randomIndexExcluding(int a, int b) {
         List<Integer> allowed = new ArrayList<>();
         for (int i = 0; i < entries.size(); i++) {
             if (i != a && i != b) allowed.add(i);
         }
-        if (allowed.isEmpty()) {                 // np. 2 wpisy: wyklucz tylko poprzedni
+        if (allowed.isEmpty()) {
             for (int i = 0; i < entries.size(); i++) {
                 if (i != a) allowed.add(i);
             }
@@ -140,10 +131,11 @@ public class Raffle {
         return allowed.get(ThreadLocalRandom.current().nextInt(allowed.size()));
     }
 
-    /** Nazwa już stoi na ekranie - tu tylko efekty, czat i uruchomienie metody wpisu. */
+
     private void reveal() {
         revealed = true;
         RaffleEntry result = entries.get(resultIndex);
+        EventTimer.setCurrentEvent(result.name());
 
         send(new ClientboundSetTitlesAnimationPacket(0, 70, 20));
         send(new ClientboundSetTitleTextPacket(
@@ -152,9 +144,8 @@ public class Raffle {
 // subtitle z wpisu; gdy pusty - domyślne "Wylosowano!"
         Component subtitle;
         if (result.subtitle() == null || result.subtitle().isBlank()) {
-            subtitle = Component.literal("★ ").withStyle(ChatFormatting.YELLOW)
-                    .append(Component.literal("Wylosowano!").withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD))
-                    .append(Component.literal(" ★").withStyle(ChatFormatting.YELLOW));
+            subtitle = Component.literal("★ ").withStyle(ChatFormatting.YELLOW);
+
         } else {
             subtitle = Component.literal(result.subtitle()).withStyle(ChatFormatting.YELLOW);
         }
@@ -165,21 +156,10 @@ public class Raffle {
         MutableComponent line = Component.literal("                                        ")
                 .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.STRIKETHROUGH);
 
-        server.getPlayerList().broadcastSystemMessage(line, false);
-        server.getPlayerList().broadcastSystemMessage(
-                Component.literal("  ★ LOSOWANIE ★").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
-        server.getPlayerList().broadcastSystemMessage(
-                Component.literal("  Losował: ").withStyle(ChatFormatting.GRAY)
-                        .append(Component.literal(starter).withStyle(ChatFormatting.YELLOW)), false);
-        server.getPlayerList().broadcastSystemMessage(
-                Component.literal("  Wylosowano: ").withStyle(ChatFormatting.GRAY)
-                        .append(Component.literal(result.name()).withStyle(result.color(), ChatFormatting.BOLD)), false);
-        server.getPlayerList().broadcastSystemMessage(line, false);
+
 
         celebrate();
 
-        // uruchomienie metody przypisanej do wylosowanego wpisu
-        // uruchomienie metody przypisanej do wylosowanego wpisu
         List<ServerPlayer> players = List.copyOf(server.getPlayerList().getPlayers());
         if (!players.isEmpty()) {
             result.action().run(server, players);
