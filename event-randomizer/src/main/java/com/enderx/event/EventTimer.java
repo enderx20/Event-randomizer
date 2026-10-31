@@ -12,7 +12,7 @@ import java.util.UUID;
 
 public final class EventTimer {
 
-    private static final int INTERVAL_TICKS = 10 *20;
+    private static final int INTERVAL_TICKS = 5 * 60 *20;
 
     private static final ServerBossEvent BAR = new ServerBossEvent(
             UUID.randomUUID(),
